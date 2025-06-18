@@ -4,6 +4,7 @@ import pandas as pd
 import yaml
 from tqdm import tqdm 
 import wandb
+import numpy as np
 
 import torch
 import torch.nn as nn
@@ -64,10 +65,13 @@ wandb.init(
     config=config
 )
 
+pre_valid_loss = 1e9
+
 # train
 for epoch in tqdm(range(train_config["epochs"])):
     model.train()
     total_loss = 0
+    total_len = 0
 
     for X_batch, y_batch in train_loader:
         X_batch = X_batch.to(device)         # (batch_size, seq_len)
@@ -80,32 +84,43 @@ for epoch in tqdm(range(train_config["epochs"])):
         optimizer.step()
 
         total_loss += loss.item()
+        total_len += len(train_loader)
 
-    train_loss = total_loss / len(train_loader)
+    train_loss = total_loss / total_len
 
+    predictions, targets = [], []
+    model.eval()
     for X_batch, y_batch in valid_loader:
+        total_val_loss = 0
+        total_val_len = 0
+
         X_batch = X_batch.to(device)         # (batch_size, seq_len)
         y_batch = y_batch.to(device).unsqueeze(1)  # (batch_size, 1)
 
-        optimizer.zero_grad()
         output = model(X_batch)              # (batch_size, 1)
-        loss = criterion(output, y_batch)
-        loss.backward()
-        optimizer.step()
+        val_loss = criterion(output, y_batch)
 
-        total_loss += loss.item()
+        total_val_loss += val_loss.item()
+        total_val_len += len(valid_loader)
+
+        predictions.extend(output.detach().cpu().numpy().flatten())
+        targets.extend(y_batch.detach().cpu().numpy().flatten())
     
-    valid_loss = total_loss / len(valid_loader)
+    valid_mae = np.mean(np.abs(np.array(predictions) - np.array(targets)))
+    valid_loss = total_val_loss / total_val_len
 
     wandb.log({
         "epoch": epoch + 1,
         "train_loss": train_loss,
-        "valid_loss": valid_loss
+        "valid_loss": valid_loss,
+        "valid_mae": valid_mae,
     })
 
-    print(f"[Epoch {epoch+1}] Train Loss: {train_loss:.4f} Valid Loss: {valid_loss:.4f}")
+    print(f"[Epoch {epoch+1}] Train Loss: {train_loss:.4f} Valid Loss: {valid_loss:.4f} Valid MAE: {valid_mae:.4f}")
 
-torch.save(model.state_dict(), "model.pt")
+    if valid_loss < pre_valid_loss:
+        torch.save(model.state_dict(), "model.pt")
+    pre_valid_loss = valid_loss
 
 # test
 model.eval()
@@ -118,11 +133,10 @@ with torch.no_grad():
         y_test = y_test.to(device).unsqueeze(1)
 
         pred = model(X_test)
-        predictions.extend(pred.cpu().numpy().flatten())
-        targets.extend(y_test.cpu().numpy().flatten())
+        predictions.extend(pred.detach().cpu().numpy().flatten())
+        targets.extend(y_test.detach().cpu().numpy().flatten())
 
 # 예: MAE 계산
-import numpy as np
 mae = np.mean(np.abs(np.array(predictions) - np.array(targets)))
 
 wandb.log({"test_mae": mae})
