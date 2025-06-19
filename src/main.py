@@ -49,8 +49,8 @@ wandb.init(
         model_config["name"],
         model_config["hidden_size"],
         model_config["num_layers"],
-        criterion,
-        optimizer,
+        train_config["criterion"],
+        train_config["optimizer"],
     ),
     config=config,
 )
@@ -116,15 +116,15 @@ for epoch in tqdm(range(train_config["epochs"])):
         torch.save(
             os.path.join(
                 config["output"]["path"],
-                model.state_dict(),
                 "{}_{}_{}_{}_{}.pt".format(
                     model_config["name"],
                     model_config["hidden_size"],
                     model_config["num_layers"],
-                    config["train"]["criterion"],
-                    config["train"]["optimizer"],
+                    train_config["criterion"],
+                    train_config["optimizer"],
                 ),
-            )
+            ),
+            model.state_dict(),
         )
     pre_valid_loss = valid_loss
 
@@ -149,11 +149,11 @@ wandb.log({"test_mae": mae})
 print(f"Test MAE: {mae:.2f}")
 
 wandb.save(
-    "{}_{}_{}_{}_{}.pt".format(
+    name="{}_{}_{}_{}_{}.pt".format(
         model_config["name"],
         model_config["hidden_size"],
         model_config["num_layers"],
-        criterion,
-        optimizer,
+        train_config["criterion"],
+        train_config["optimizer"],
     )
 )

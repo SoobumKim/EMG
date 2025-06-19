@@ -73,21 +73,21 @@ class preprocess_dataset:
             batch_size=batch_size,
             shuffle=True,
             num_workers=4,
-            pin_memory=True,
+            pin_memory=False,
             collate_fn=collate_fn,
         )
         valid_loader = DataLoader(
             valid_dataset,
             batch_size=batch_size,
             num_workers=4,
-            pin_memory=True,
+            pin_memory=False,
             collate_fn=collate_fn,
         )
         test_loader = DataLoader(
             test_dataset,
             batch_size=batch_size,
             num_workers=4,
-            pin_memory=True,
+            pin_memory=False,
             collate_fn=collate_fn,
         )
 
