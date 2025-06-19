@@ -4,43 +4,41 @@ from glob import glob
 import numpy as np
 import pandas as pd
 import torch
-import torch.nn as nn
-import torch.optim as optim
 import yaml
 from tqdm import tqdm
 
-import wandb
 from data_preprocess import preprocess_dataset
-from src.model.models import EMGLSTMModel
+from src.model.models import EMGCombinedModel, EMGLSTMModel
+
+with open("src/config.yaml", "r") as f:
+    config = yaml.safe_load(f)
+
+data_dir = config["data"]["root_dir"]
+csv_dirs = glob(os.path.join(data_dir, config["data"]["emg_dir"], "*_M_*.csv"))
+meta_data = pd.read_csv(os.path.join(data_dir, config["data"]["metadata_dir"]))
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# load dataset
-data_root_dir = "EMG"
-csv_dirs = glob(os.path.join(data_root_dir, "*_M_*.csv"))
-meta_data = pd.read_csv("metadata.csv")
+# load model
+model_config = config["model"]
+model = eval(model_config["name"])(
+    input_size=model_config["input_size"],
+    hidden_size=model_config["hidden_size"],
+    num_layers=model_config["num_layers"],
+    dropout_rate=model_config["dropout"],
+).to(device)
+
+train_config = config["train"]
 
 # Data preprocessing
 dataset_builder = preprocess_dataset(csv_dirs, meta_data)
 dataset_builder.read_csv()
 dataset_builder.split_dataset()
-loader = dataset_builder.load_dataset()
+loader = dataset_builder.load_dataset(train_config["batch_size"])
 
 _, _, test_loader = loader
 
-# load model
-with open("config.yaml", "r") as f:
-    config = yaml.safe_load(f)
-
-model_config = config["model"]
-model = EMGLSTMModel(
-    input_size=model_config["input_size"],
-    hidden_size=model_config["hidden_size"],
-    num_layers=model_config["num_layers"],
-).to(device)
-
-model.load_state_dict(torch.load("model.pt"))
-
+model.load_state_dict(torch.load("model_adam.pt"))
 # test
 model.eval()
 predictions, targets = [], []

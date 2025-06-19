@@ -13,9 +13,9 @@ def setup_training(config, model):
 
     # Optimizer
     if config["optimizer"] == "adam":
-        optimizer = optim.Adam(model.parameters(), lr=config["train"]["learning_rate"])
+        optimizer = optim.Adam(model.parameters(), lr=config["learning_rate"])
     elif config["optimizer"] == "sgd":
-        optimizer = optim.SGD(model.parameters(), lr=config["train"]["learning_rate"])
+        optimizer = optim.SGD(model.parameters(), lr=config["learning_rate"])
     else:
         raise ValueError("Unsupported optimizer")
 

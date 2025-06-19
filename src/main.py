@@ -27,6 +27,7 @@ model = eval(model_config["name"])(
     input_size=model_config["input_size"],
     hidden_size=model_config["hidden_size"],
     num_layers=model_config["num_layers"],
+    dropout_rate=model_config["dropout"],
 ).to(device)
 
 train_config = config["train"]
