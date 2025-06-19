@@ -1,0 +1,21 @@
+model:
+  name: EMGCombinedModel # EMGLSTMModel, EMGCombinedModel
+  input_size: 1
+  hidden_size: 64
+  num_layers: 1
+
+data:
+  root_dir: data
+  emg_dir: EMG
+  metadata_dir: metadata.csv
+
+train:
+  epochs: 100
+  batch_size: 32
+  learning_rate: 0.001
+  criterion: mse
+  optimizer: adam
+
+output:
+  path: ckpt
+  

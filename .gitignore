@@ -1,0 +1,8 @@
+*.jpg
+*.csv
+*.pyc
+*.RData
+*.data
+*.dat
+wandb
+*.pt
