@@ -45,7 +45,7 @@ criterion, optimizer = setup_training(train_config, model)
 # wandb init
 wandb.init(
     project="emg-age-estimation",
-    name="{}_{}_{}_{}_{}.pt".format(
+    name="{}_{}_{}_{}_{}".format(
         model_config["name"],
         model_config["hidden_size"],
         model_config["num_layers"],
@@ -114,6 +114,7 @@ for epoch in tqdm(range(train_config["epochs"])):
 
     if valid_loss < pre_valid_loss:
         torch.save(
+            model.state_dict(),
             os.path.join(
                 config["output"]["path"],
                 "{}_{}_{}_{}_{}.pt".format(
@@ -124,7 +125,6 @@ for epoch in tqdm(range(train_config["epochs"])):
                     train_config["optimizer"],
                 ),
             ),
-            model.state_dict(),
         )
     pre_valid_loss = valid_loss
 
@@ -149,7 +149,7 @@ wandb.log({"test_mae": mae})
 print(f"Test MAE: {mae:.2f}")
 
 wandb.save(
-    name="{}_{}_{}_{}_{}.pt".format(
+    name="{}_{}_{}_{}_{}".format(
         model_config["name"],
         model_config["hidden_size"],
         model_config["num_layers"],
