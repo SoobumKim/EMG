@@ -41,7 +41,6 @@ _, _, test_loader = loader
 model.load_state_dict(
     torch.load(
         "ckpt/EMGCombinedBiLSTMModel_128_3_mae_adam_0620.pt",
-        map_location=torch.device("cpu"),
     )
 )
 # test
@@ -54,9 +53,12 @@ with torch.no_grad():
         X_test = X_test.to(device)
         y_test = y_test.to(device).unsqueeze(1)
 
-        pred = model(X_test[:2048])
+        pred = model(X_test[:, :2048].contiguous())
         predictions.extend(pred.detach().cpu().numpy().flatten())
         targets.extend(y_test.detach().cpu().numpy().flatten())
 
 # 예: MAE 계산
 mae = np.mean(np.abs(np.array(predictions) - np.array(targets)))
+with open("result_predictions.txt", "w", encoding="utf-8") as f:
+    for t, p in zip(targets, predictions):
+        f.write("정답 나이: {}, 예측 나이: {}\n".format(t, p))
