@@ -8,7 +8,7 @@ import yaml
 from tqdm import tqdm
 
 from data_preprocess import preprocess_dataset
-from src.model.models import EMGCombinedModel, EMGLSTMModel
+from src.model.models import EMGCombinedBiLSTMModel, EMGCombinedModel, EMGLSTMModel
 
 with open("src/config.yaml", "r") as f:
     config = yaml.safe_load(f)

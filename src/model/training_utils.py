@@ -1,5 +1,6 @@
 import torch.nn as nn
 import torch.optim as optim
+from torch.optim.lr_scheduler import CosineAnnealingLR
 
 
 def setup_training(config, model):
@@ -19,4 +20,9 @@ def setup_training(config, model):
     else:
         raise ValueError("Unsupported optimizer")
 
-    return criterion, optimizer
+    scheduler = CosineAnnealingLR(
+        optimizer,
+        T_max=config["epochs"],  # 또는 total_epochs
+        eta_min=1e-6,  # 최소 학습률
+    )
+    return criterion, optimizer, scheduler

@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 import wandb
 from data_preprocess import preprocess_dataset
-from src.model.models import EMGCombinedModel, EMGLSTMModel
+from src.model.models import EMGCombinedBiLSTMModel, EMGCombinedModel, EMGLSTMModel
 from src.model.training_utils import setup_training
 
 with open("src/config.yaml", "r") as f:
@@ -40,7 +40,7 @@ loader = dataset_builder.load_dataset(train_config["batch_size"])
 
 train_loader, valid_loader, test_loader = loader
 
-criterion, optimizer = setup_training(train_config, model)
+criterion, optimizer, scheduler = setup_training(train_config, model)
 
 # wandb init
 wandb.init(
@@ -57,7 +57,7 @@ wandb.init(
 
 
 # train
-pre_valid_loss = 1e9
+pre_valid_mae = 1e9
 for epoch in tqdm(range(train_config["epochs"])):
     model.train()
     total_loss = 0
@@ -68,7 +68,7 @@ for epoch in tqdm(range(train_config["epochs"])):
         y_batch = y_batch.to(device).unsqueeze(1)  # (batch_size, 1)
 
         optimizer.zero_grad()
-        output = model(X_batch)  # (batch_size, 1)
+        output = model(X_batch[:, :2048])  # (batch_size, 1)
         loss = criterion(output, y_batch.squeeze(1))
         loss.backward()
         optimizer.step()
@@ -87,7 +87,7 @@ for epoch in tqdm(range(train_config["epochs"])):
         X_batch = X_batch.to(device)  # (batch_size, seq_len)
         y_batch = y_batch.to(device).unsqueeze(1)  # (batch_size, 1)
 
-        output = model(X_batch)  # (batch_size, 1)
+        output = model(X_batch[:, :2048])  # (batch_size, 1)
         val_loss = criterion(output, y_batch)
 
         total_val_loss += val_loss.item()
@@ -99,12 +99,16 @@ for epoch in tqdm(range(train_config["epochs"])):
     valid_mae = np.mean(np.abs(np.array(predictions) - np.array(targets)))
     valid_loss = total_val_loss / total_val_len
 
+    scheduler.step(valid_loss)
+    current_lr = optimizer.param_groups[0]["lr"]
+
     wandb.log(
         {
             "epoch": epoch + 1,
             "train_loss": train_loss,
             "valid_loss": valid_loss,
             "valid_mae": valid_mae,
+            "learning_rate": current_lr,
         }
     )
 
@@ -112,7 +116,7 @@ for epoch in tqdm(range(train_config["epochs"])):
         f"[Epoch {epoch+1}] Train Loss: {train_loss:.4f} Valid Loss: {valid_loss:.4f} Valid MAE: {valid_mae:.4f}"
     )
 
-    if valid_loss < pre_valid_loss:
+    if valid_mae < pre_valid_mae:
         torch.save(
             model.state_dict(),
             os.path.join(
@@ -126,7 +130,7 @@ for epoch in tqdm(range(train_config["epochs"])):
                 ),
             ),
         )
-    pre_valid_loss = valid_loss
+    pre_valid_mae = valid_mae
 
 # test
 model.eval()
@@ -138,7 +142,7 @@ with torch.no_grad():
         X_test = X_test.to(device)
         y_test = y_test.to(device).unsqueeze(1)
 
-        pred = model(X_test)
+        pred = model(X_test[:, :2048])
         predictions.extend(pred.detach().cpu().numpy().flatten())
         targets.extend(y_test.detach().cpu().numpy().flatten())
 
