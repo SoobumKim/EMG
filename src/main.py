@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from glob import glob
 
 import numpy as np
@@ -42,15 +43,17 @@ train_loader, valid_loader, test_loader = loader
 
 criterion, optimizer, scheduler = setup_training(train_config, model)
 
+nowtime = datetime.now().strftime("%m%d")
 # wandb init
 wandb.init(
     project="emg-age-estimation",
-    name="{}_{}_{}_{}_{}".format(
+    name="{}_{}_{}_{}_{}_{}".format(
         model_config["name"],
         model_config["hidden_size"],
         model_config["num_layers"],
         train_config["criterion"],
         train_config["optimizer"],
+        nowtime,
     ),
     config=config,
 )
@@ -121,16 +124,17 @@ for epoch in tqdm(range(train_config["epochs"])):
             model.state_dict(),
             os.path.join(
                 config["output"]["path"],
-                "{}_{}_{}_{}_{}.pt".format(
+                "{}_{}_{}_{}_{}_{}.pt".format(
                     model_config["name"],
                     model_config["hidden_size"],
                     model_config["num_layers"],
                     train_config["criterion"],
                     train_config["optimizer"],
+                    nowtime,
                 ),
             ),
         )
-    pre_valid_mae = valid_mae
+        pre_valid_mae = valid_mae
 
 # test
 model.eval()
@@ -153,11 +157,12 @@ wandb.log({"test_mae": mae})
 print(f"Test MAE: {mae:.2f}")
 
 wandb.save(
-    name="{}_{}_{}_{}_{}".format(
+    name="{}_{}_{}_{}_{}_{}".format(
         model_config["name"],
         model_config["hidden_size"],
         model_config["num_layers"],
         train_config["criterion"],
         train_config["optimizer"],
+        nowtime,
     )
 )

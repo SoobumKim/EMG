@@ -38,7 +38,12 @@ loader = dataset_builder.load_dataset(train_config["batch_size"])
 
 _, _, test_loader = loader
 
-model.load_state_dict(torch.load("model_adam.pt"))
+model.load_state_dict(
+    torch.load(
+        "ckpt/EMGCombinedBiLSTMModel_128_3_mae_adam_0620.pt",
+        map_location=torch.device("cpu"),
+    )
+)
 # test
 model.eval()
 predictions, targets = [], []
@@ -49,7 +54,7 @@ with torch.no_grad():
         X_test = X_test.to(device)
         y_test = y_test.to(device).unsqueeze(1)
 
-        pred = model(X_test)
+        pred = model(X_test[:2048])
         predictions.extend(pred.detach().cpu().numpy().flatten())
         targets.extend(y_test.detach().cpu().numpy().flatten())
 
